@@ -1,0 +1,96 @@
+<html lang = "it">
+	<head>
+		<meta charset = "utf8"></meta>
+		<title>Book Search</title>
+		<link href="style/booksearch.css" rel="stylesheet" type="text/css">
+		<script src="https://code.jquery.com/jquery-3.1.0.js"></script>
+		<script src="utils/interface.js"></script>
+	</head>
+	<body>
+		<div>
+		<h1 id = "title">
+		BookSearch
+		</h1>
+		<form id = "search" method = "get">
+		<label for = "isbn-in">Inserisci l'isbn del libro</label>
+		<input type = "text" id = "isbn" name = "isbn-in">
+		<input type = "submit">
+		</form>
+		</div>
+		<div id = "results">
+		</div>
+		<div class = "wrapper" >
+		<button id = "generator">Genera</button>
+		<textarea id = "textarea" rows="25" cols="128" value = "">
+		</textarea>
+		</div>
+
+		<script>
+			var end_point = "https://www.googleapis.com/books/v1/volumes?";
+			var action = "q=";
+			var param = "+isbn";
+			$(document).ready (function () {
+				$("#generator").click (function () {
+				$("#generator").hide (700);
+				$("#textarea").show (1500);
+				});
+
+				$(document).on("click",".book", function () {
+				    var text =  $("#textarea").val ();
+				    if (text.trim().length == 0)
+				    $("#textarea").val ($("[name = '" + this.name + "']").data("book"));
+				    else
+				    $("#textarea").val (text + ",\n" + $("[name = '" + this.name + "']").data("book") );
+				});
+
+				$("#textarea").val ("");
+				$("#textarea").hide ();
+				$("#search").submit (function (event) {
+					event.preventDefault ();
+					$("#results").empty ();
+
+					var isbn = $("#isbn").val ();
+
+					var input = validate (isbn);
+					if (input["valid"] == false) {
+					$("#results").append ("<p><b>l'isbn: " + isbn +
+					" non è valido</b></p>");
+					return false;
+					}
+					
+					$.get(end_point + action + input["isbn"] + param, function (data, status) {
+						var results = "<table>";
+					    var temp_books = []
+					    var title, temp_book, thumbnail;
+						for (var book = 0; book < data.items.length; book++) {
+
+							temp_book =  convertBook (data.items[book].volumeInfo);
+							temp_books.push(temp_book);
+
+							if (data.items[book].volumeInfo.subtitle != null)
+							title = data.items[book].volumeInfo.title + ": " +
+							data.items[book].volumeInfo.subtitle;
+							else
+							title = data.items[book].volumeInfo.title;
+
+							if (data.items[book].volumeInfo.imageLinks != null)
+							thumbnail =  data.items[book].volumeInfo.imageLinks.smallThumbnail;
+							else
+							thumbnail = "images/404.svg"
+							results += "<tr><td>" + title + "</td>" +
+							"<td><img src = '" + thumbnail + "'/></td>" +
+							"<td><button class = 'book' name = 'book" + book + "'>Aggiungi</button></td></tr>";
+						}
+						results += "</table>"
+						$("#results").append (results);
+						/*before add data into each button with jquey.data, there is the need to add
+						    the elements to the DOM, so we call append previous to this for loop*/
+						for (var book = 0; book < temp_books.length; book++)
+						    $("[name = 'book" + book + "']").data("book", JSON.stringify(temp_books[book]));
+                        
+					});
+				});
+			});
+		</script>
+	</body>
+</html>
